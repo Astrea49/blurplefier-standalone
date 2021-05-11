@@ -5,7 +5,7 @@ A (WIP) standalone version of the blurplefier part of the Blurplefier bot (from 
 
 > Why?
 
-Because I like the Burplefier bot and think its conversion tool is really neat. I believe it'll be of great help with [my Blurplefied Resource Pack for Minecraft](https://github.com/Sonic4999/Blurplefied-Resource-Pack), as I've previously had to use this really obscure program that has been removed from GitHub.
+Because I like the Burplefier bot and think its conversion tool is really neat. I believe it'll be of great help with [my Blurplefied Resource Pack for Minecraft](https://github.com/Sonic4999/Blurplefied-Resource-Pack), as I've previously had to use this really obscure program that has been removed from GitHub a while back.
 
 > Why not make your own solution from scratch, then?
 
