@@ -13,4 +13,5 @@ setup(
     url="https://github.com/Sonic4999/blurplefier-standalone",
     packages=["blurplefier"],
     install_requires=["pillow"],
+    python_requires='>=3.8.0',
 )
