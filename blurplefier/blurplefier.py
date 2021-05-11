@@ -360,8 +360,8 @@ VARIATIONS = {
 
 def write_image(out, frames, filename="blurple.gif"):
     """Instead of saving a series of complete images, this saves the deltas.
-    This has an unknown purpose, as least from a standalone POV.
-    Don't use this unless you know what you're doing.
+    Useful for making GIFs not take as much space.
+    Raw function: don't use this unless you know what you're doing.
     """
     for s in GifImagePlugin._get_global_header(frames[0], frames[0].info):
         out.write(s)
