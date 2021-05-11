@@ -444,7 +444,7 @@ def convert_image(
         `blurplefy` is the classical version.
         `filter` is better with images that have more detail.
         `edge-detect` is `blurplefy` but with a special case to preserve edges.
-    variations: :class:`List[Literal] (please check the actual type hints for what variations can be used)`
+    variations: :class:`Optional[List[Literal]] (please check the actual type hints for what variations can be used)`
         The variations to use while converting the image, if needed.
         These help adjust the image to a more desirable state.
         Note that they will no effect with the `filter` method.
