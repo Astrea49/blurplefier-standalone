@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import enum
+import functools
 import io
 import math
 import typing
@@ -267,29 +268,6 @@ def _variation_maker(base, var):
     return base1, base2, base3, base4
 
 
-def _variation_converter(variations, modifier):
-    variations.sort()
-    base_color_var = (0.15, 0.3, 0.7, 0.85)
-    background_color = None
-    for var in variations:
-        try:
-            variation = VARIATIONS[var]
-        except KeyError:
-            try:
-                variation = VARIATIONS["bg" + var]
-                background_color = variation
-                continue
-            except KeyError:
-                try:
-                    variation = VARIATIONS["method" + var]
-                    modifier = variation(modifier)
-                    continue
-                except KeyError:
-                    raise RuntimeError(f'Invalid image variation: "{var}"')
-        base_color_var = _variation_maker(base_color_var, variation)
-    return base_color_var, background_color, modifier
-
-
 def _invert_colors(modifier):
     modifier["colors"] = list(reversed(modifier["colors"]))
     return modifier
@@ -299,13 +277,6 @@ def _shift_colors(modifier):
     colors = modifier["colors"]
     modifier["colors"] = [colors[2], colors[0], colors[1]]
     return modifier
-
-
-def _interpolate_colors(color1, color2, x):
-    new_color = [0, 0, 0]
-    for i in range(3):
-        new_color[i] = round((color2[i] - color1[i]) * x + color1[i])
-    return tuple(new_color)
 
 
 def _distance_to_color(color1, color2):
@@ -323,6 +294,58 @@ def _find_max_index(array):
     return closest
 
 
+class _FunctionWrapper:
+    """Wrapper for functions so that they can be properly enum'd."""
+
+    def __init__(self, f):
+        self.f = f
+
+    def __call__(self, *args, **kwargs):
+        return self.f(*args, **kwargs)
+
+
+class Methods(enum.Enum):
+    """Enum for specifying which method to use for blurpling."""
+
+    CLASSIC = BLURPLEFY = _FunctionWrapper(_blurplefy)
+    EDGE_DETECT = _FunctionWrapper(_edge_detect)
+    FILTER = _FunctionWrapper(_blurple_filter)
+
+
+class Variations(enum.Enum):
+    """Enum for basic variations to the blurplefied image."""
+
+    MORE_WHITE = (0, 0, -0.05, -0.05)
+    MORE_BLURPLE = (-0.1, -0.1, 0.1, 0.1)
+    MORE_DARK_BLURPLE = (0.05, 0.05, 0, 0)
+    LESS_WHITE = (0, 0, 0.05, 0.05)
+    LESS_BLURPLE = (0.1, 0.1, -0.1, -0.1)
+    LESS_DARK_BLURPLE = (-0.05, -0.05, 0, 0)
+    NO_WHITE = (0, 0, 500, 500)
+    NO_BLURPLE = (0, 500, -500, 0)
+    NO_DARK_BLURPLE = (-500, -500, 0, 0)
+    CLASSIC = (0.15, -0.15, 0.15, -0.15)
+    LESS_GRADIENT = (0.05, -0.05, 0.05, -0.05)
+    MORE_GRADIENT = (-0.05, 0.05, -0.05, 0.05)
+
+
+class BGVariations(enum.Enum):
+    """Enum for variations that change the background of the blurplefied image."""
+
+    WHITE_BG = (255, 255, 255, 255)
+    BLURPLE_BG = (114, 137, 218, 255)
+    DARK_BLURPLE_BG = (78, 93, 148, 255)
+
+
+class MethodVariations(enum.Enum):
+    """Enum for variations that modify the blurplefied image in more drastic ways."""
+
+    INVERT = _FunctionWrapper(_invert_colors)
+    SHIFT = _FunctionWrapper(_shift_colors)
+
+
+AllVariations = typing.Union[Variations, BGVariations, MethodVariations]
+
 MODIFIERS = {
     "light": {
         "func": _light,
@@ -332,32 +355,24 @@ MODIFIERS = {
 }
 
 
-class Methods(enum.Enum):
-    CLASSIC = BLURPLEFY = _blurplefy
-    EDGE_DETECT = _edge_detect
-    FILTER = _blurple_filter
-
-
-VARIATIONS = {
-    None: (0, 0, 0, 0),
-    "++more-white": (0, 0, -0.05, -0.05),
-    "++more-blurple": (-0.1, -0.1, 0.1, 0.1),
-    "++more-dark-blurple": (0.05, 0.05, 0, 0),
-    "++less-white": (0, 0, 0.05, 0.05),
-    "++less-blurple": (0.1, 0.1, -0.1, -0.1),
-    "++less-dark-blurple": (-0.05, -0.05, 0, 0),
-    "++no-white": (0, 0, 500, 500),
-    "++no-blurple": (0, 500, -500, 0),
-    "++no-dark-blurple": (-500, -500, 0, 0),
-    "++classic": (0.15, -0.15, 0.15, -0.15),
-    "++less-gradient": (0.05, -0.05, 0.05, -0.05),
-    "++more-gradient": (-0.05, 0.05, -0.05, 0.05),
-    "method++invert": _invert_colors,
-    "method++shift": _shift_colors,
-    "bg++white-bg": (255, 255, 255, 255),
-    "bg++blurple-bg": (114, 137, 218, 255),
-    "bg++dark-blurple-bg": (78, 93, 148, 255),
-}
+def _variation_converter(variations: typing.Iterable[AllVariations], modifier):
+    base_color_var = (0.15, 0.3, 0.7, 0.85)
+    background_color = None
+    for var in variations:
+        if isinstance(var, Variations):
+            variation = var.value
+        elif isinstance(var, BGVariations):
+            variation = var.value
+            background_color = variation
+            continue
+        elif isinstance(var, MethodVariations):
+            variation = var.value
+            modifier = variation(modifier)
+            continue
+        else:
+            raise RuntimeError(f'Invalid image variation: "{var}"')
+        base_color_var = _variation_maker(base_color_var, variation)
+    return base_color_var, background_color, modifier
 
 
 def write_image(out, frames, filename="blurple.gif"):
@@ -389,38 +404,16 @@ def write_image(out, frames, filename="blurple.gif"):
 def convert_image(
     image: bytes,
     method: Methods,
-    variations: typing.Optional[
-        typing.Iterable[
-            typing.Literal[
-                "++more-white",
-                "++more-blurple",
-                "++more-dark-blurple",
-                "++less-white",
-                "++less-blurple",
-                "++less-dark-blurple",
-                "++no-white",
-                "++no-blurple",
-                "++no-dark-blurple",
-                "++classic",
-                "++less-gradient",
-                "++more-gradient",
-                "++invert",
-                "++shift",
-                "++white-bg",
-                "++blurple-bg",
-                "++dark-blurple-bg",
-            ]
-        ]
-    ] = None,
+    variations: typing.Optional[typing.Iterable[AllVariations]] = None,
 ) -> typing.Tuple[str, bytes]:
     """Converts the given image into a blurplefied version of itself with the methods and variations applied.
 
     Parameters
     ----------
-    image: :class:`bytes`
+    image: `bytes`
         The image to be converted in bytes form.
 
-    method: :class:`blurplefier.Methods`
+    method: `blurplefier.Methods`
         The filter to be used on the image in order to blurplefy it.
 
         `CLASSIC` or `BLURPLEFY` is the classical version.
@@ -429,14 +422,18 @@ def convert_image(
 
         `EDGE_DETECT` is `CLASSIC` but with a special case to preserve edges.
 
-    variations: :class:`Optional[Iterable[Literal]] (please check the actual code for what variations can be used)`
+    variations: `Optional[Iterable[AllVariations]]`
         The variations to use while converting the image, if needed.
+
         These help adjust the image to a more desirable state.
+
         Note that they will no effect with the `filter` method.
+
+        The variations that can be used are featured in the `Variations`, `BGVariations`, and `MethodVariations` classes.
 
     Returns
     ----------
-    :class:`Tuple[str, bytes]`
+    `Tuple[str, bytes]`
         A tuple containing the extension of the resulting image and the image data.
     """
 
@@ -447,7 +444,7 @@ def convert_image(
     if variations is None:
         variations = [None]
 
-    method_converter = method
+    method_converter = method.value
 
     base_color_var, background_color, modifier_converter = _variation_converter(
         variations, modifier_converter

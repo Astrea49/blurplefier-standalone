@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setup(
     name="blurplefier-standalone",
-    version="0.0.4",
+    version="0.0.5",
     description="A standalone version of the blurplefier that the Blurplefier bot has.",
     license="MIT",
     long_description=long_description,
