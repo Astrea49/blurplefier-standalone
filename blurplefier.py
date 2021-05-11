@@ -1,19 +1,16 @@
 # -*- coding: utf-8 -*-
 import io
-import logging
 import math
+import sys
+import typing
+from gc import get_referents
+from types import FunctionType
+from types import ModuleType
 
 from PIL import GifImagePlugin
 from PIL import Image
 from PIL import ImageSequence
 from pympler import asizeof
-
-
-log = logging.getLogger(__name__)
-
-import sys
-from types import ModuleType, FunctionType
-from gc import get_referents
 
 # Custom objects know their class.
 # Function objects seem to know way too much, including modules.
@@ -122,7 +119,7 @@ def edge_antialiasing(img):
             Gy += r + g + b
 
             # calculate the length of the gradient (Pythagorean theorem)
-            length = math.sqrt((Gx * Gx) + (Gy * Gy))
+            length = math.sqrt(Gx ** 2 + Gy ** 2)
 
             # normalise the length of gradient to the range 0 to 255
             length = length / 4328 * 255
@@ -176,8 +173,7 @@ def edge_detect(img, modifier, variation, maximum, minimum):
     img = img.convert("RGBA")
     edge_img = edge_antialiasing(img)
     img = blurplefy(img, modifier, variation, maximum, minimum)
-    new_img = place_edges(img, edge_img, modifier)
-    return new_img
+    return place_edges(img, edge_img, modifier)
 
 
 def interpolate(color1, color2, percent):
@@ -213,10 +209,7 @@ def f2(x, n, colors, variation):
 
 
 def f3(x, n, colors, cur_color):
-    array = []
-
-    for i in range(len(colors)):
-        array.append(distance_to_color(colors[i], cur_color))
+    array = [distance_to_color(colors[i], cur_color) for i in range(len(colors))]
 
     closest_color = find_max_index(array)
     if closest_color == 0:
@@ -341,9 +334,7 @@ def interpolate_colors(color1, color2, x):
 
 
 def distance_to_color(color1, color2):
-    total = 0
-    for i in range(3):
-        total += (255 - abs(color1[i] - color2[i])) / 255
+    total = sum((255 - abs(color1[i] - color2[i])) / 255 for i in range(3))
     return total / 3
 
 
@@ -357,40 +348,6 @@ def find_max_index(array):
     return closest
 
 
-def color_ratios(img, colors):
-    img = img.convert("RGBA")
-    total_pixels = img.width * img.height
-    color_pixels = [0, 0, 0, 0]
-    close_colors = []
-    for i in range(3):
-        close_colors.append(interpolate_colors(colors[i], colors[min(i + 1, 2)], 0.33))
-        close_colors.append(interpolate_colors(colors[i], colors[max(i - 1, 0)], 0.33))
-
-    for x in range(0, img.width):
-        for y in range(0, img.height):
-            p = img.getpixel((x, y))
-            if p[3] == 0:
-                total_pixels -= 1
-                continue
-            values = [0, 0, 0]
-            for i in range(3):
-                values[i] = max(
-                    distance_to_color(p, colors[i]),
-                    distance_to_color(p, close_colors[2 * i]),
-                    distance_to_color(p, close_colors[2 * i + 1]),
-                )
-            index = find_max_index(values)
-            if values[index] > 0.93:
-                color_pixels[index] += 1
-            else:
-                color_pixels[3] += 1
-
-    percent = [0, 0, 0, 0]
-    for i in range(4):
-        percent[i] = color_pixels[i] / total_pixels
-    return percent
-
-
 MODIFIERS = {
     "light": {
         "func": light,
@@ -400,9 +357,9 @@ MODIFIERS = {
 }
 
 METHODS = {
-    "--blurplefy": blurplefy,
-    "--edge-detect": edge_detect,
-    "--filter": blurple_filter,
+    "blurplefy": blurplefy,
+    "edge-detect": edge_detect,
+    "filter": blurple_filter,
 }
 
 VARIATIONS = {
@@ -450,11 +407,56 @@ def writeImage(out, frames, filename="blurple.gif"):
         )
 
 
-def convert_image(image, modifier, method, variations):
-    try:
-        modifier_converter = dict(MODIFIERS[modifier])
-    except KeyError:
-        raise RuntimeError(f'Invalid image modifier: "{modifier}"')
+def convert_image(
+    image: bytes,
+    method: typing.Literal["blurplefy", "edge-detect", "filter"],
+    variations: typing.List[
+        typing.Literal[
+            None,
+            "++more-white",
+            "++more-blurple",
+            "++more-dark-blurple",
+            "++less-white",
+            "++less-blurple",
+            "++less-dark-blurple",
+            "++no-white",
+            "++no-blurple",
+            "++no-dark-blurple",
+            "++classic",
+            "++less-gradient",
+            "++more-gradient",
+            "method++invert",
+            "method++shift",
+            "bg++white-bg",
+            "bg++blurple-bg",
+            "bg++dark-blurple-bg",
+        ]
+    ],
+) -> typing.Tuple[str, bytes]:
+    """Converts the given image into a blurplefied version of itself with the methods and variations applied.
+
+    Parameters
+    ----------
+    image: :class:`bytes`
+        The image to be converted in bytes form.
+    method: :class:`Literal["blurplefy", "edge-detect", "filter"]`
+        The filter to be used on the image in order to blurplefy it.
+        `blurplefy` is the classical version.
+        `filter` is better with images that have more detail.
+        `edge-detect` is `blurplefy` but with a special case to preserve edges.
+    variations: :class:`List[Literal] (please check the actual type hints for what variations can be used)`
+        The variations to use while converting the image, if needed.
+        These help adjust the image to a more desirable state.
+        Note that they will no effect with the `filter` method.
+
+    Returns
+    ----------
+    :class:`Tuple[str, bytes]`
+        A tuple containing the filename of the resulting image and the image data.
+    """
+
+    # there's only one for now anyways
+    modifier_converter = dict(MODIFIERS["light"])
 
     try:
         method_converter = METHODS[method]
@@ -512,7 +514,6 @@ def convert_image(image, modifier, method, variations):
             palette = None
 
             for frame in ImageSequence.Iterator(img):
-                print(index)
                 index += 1
                 disposals.append(
                     frame.disposal_method if img.format == "GIF" else frame.dispose_op
@@ -565,7 +566,6 @@ def convert_image(image, modifier, method, variations):
                     transparency=255,
                 )
             except TypeError as e:
-                log.exception()
                 raise RuntimeError("Invalid GIF.")
 
             filename = f"blurple.gif"
@@ -613,7 +613,6 @@ def convert_image(image, modifier, method, variations):
             index = 0
 
             for frame in ImageSequence.Iterator(img):
-                print(index)
                 index += 1
                 # disposals.append(frame.dispose_op)
                 durations.append(frame.info["duration"])
@@ -651,7 +650,6 @@ def convert_image(image, modifier, method, variations):
                     blend=blends,
                 )
             except TypeError as e:
-                log.exception()
                 raise RuntimeError("Invalid APNG.")
 
             filename = f"blurple.png"
@@ -664,69 +662,19 @@ def convert_image(image, modifier, method, variations):
                 img.thumbnail(
                     (int(width * ratio), int(height * ratio)), Image.ANTIALIAS
                 )
-            print(f"Final:{asizeof.asizeof(img)/1024}")
-            print(asizeof.asizeof(img) / 1024)
             img = img.convert("LA")
-            print(asizeof.asizeof(img) / 1024)
 
             minimum = img.getextrema()[0][0]
             maximum = img.getextrema()[0][1]
-            print(asizeof.asizeof(img) / 1024)
             img = method_converter(
                 img, modifier_converter, base_color_var, maximum, minimum
             )
             if background_color is not None:
                 img = remove_alpha(img, background_color)
-            print(asizeof.asizeof(img) / 1024)
-            if img.tell() > 1024 ** 2 * 8:
-                raise RuntimeError(f"Final image too big!")
+
             out = io.BytesIO()
             img.save(out, format="png")
             filename = f"blurple.png"
 
     out.seek(0)
     return filename, out.getvalue()
-
-
-def check_image(image, modifier, method):
-    try:
-        modifier_converter = MODIFIERS[modifier]
-    except KeyError:
-        raise RuntimeError("Invalid image modifier.")
-
-    with Image.open(io.BytesIO(image)) as img:
-        if img.format == "GIF":
-            total = [0, 0, 0, 0]
-            count = 0
-
-            for frame in ImageSequence.Iterator(img):
-                f = frame.resize((round(img.width / 3), round(img.height / 3)))
-                values = color_ratios(f, modifier_converter["colors"])
-                for i in range(4):
-                    total[i] += values[i]
-                count += 1
-
-            ratios = [0, 0, 0, 0]
-            for i in range(4):
-                ratios[i] = round(10000 * total[i] / count) / 100
-
-            passed = ratios[3] <= 10
-
-        else:
-            img = img.resize((round(img.width / 3), round(img.height / 3)))
-            values = color_ratios(img, modifier_converter["colors"])
-
-            ratios = [0, 0, 0, 0]
-            for i in range(4):
-                ratios[i] = round(10000 * values[i]) / 100
-
-            passed = ratios[3] <= 10
-
-    colors = []
-    for i in range(3):
-        colors.append(
-            {"name": modifier_converter["color_names"][i], "ratio": ratios[i]}
-        )
-    colors.append({"name": "Non-Blurple", "ratio": ratios[3]})
-    data = {"passed": passed, "colors": colors}
-    return data
