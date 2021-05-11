@@ -6,4 +6,4 @@ Copyright (c) 2019 - 2021 Project Blurple, Sonic49
 :license: MIT, see LICENSE for more details.
 """
 from .blurplefier import convert_image
-from .blurplefier import writeImage
+from .blurplefier import write_image

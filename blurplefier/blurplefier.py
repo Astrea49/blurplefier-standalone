@@ -358,8 +358,11 @@ VARIATIONS = {
 }
 
 
-def writeImage(out, frames, filename="blurple.gif"):
-    # Instead of saving a series of complete images, this saves the deltas
+def write_image(out, frames, filename="blurple.gif"):
+    """Instead of saving a series of complete images, this saves the deltas.
+    This has an unknown purpose, as least from a standalone POV.
+    Don't use this unless you know what you're doing.
+    """
     for s in GifImagePlugin._get_global_header(frames[0], frames[0].info):
         out.write(s)
     for frame in frames:
