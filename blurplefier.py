@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-
 import io
 import logging
 import math
+
+from PIL import GifImagePlugin
+from PIL import Image
+from PIL import ImageSequence
 from pympler import asizeof
-from PIL import Image, ImageSequence, GifImagePlugin
 
 
 log = logging.getLogger(__name__)
@@ -22,7 +24,7 @@ BLACKLIST = type, ModuleType, FunctionType
 def getsize(obj):
     """sum size of object & members."""
     if isinstance(obj, BLACKLIST):
-        raise TypeError('getsize() does not take argument of type: ' + str(type(obj)))
+        raise TypeError("getsize() does not take argument of type: " + str(type(obj)))
     seen_ids = set()
     size = 0
     objects = [obj]
@@ -40,8 +42,12 @@ def getsize(obj):
 # source: https://dev.to/enzoftware/how-to-build-amazing-image-filters-with-python-median-filter---sobel-filter---5h7
 def edge_antialiasing(img):
     new_img = Image.new("RGB", img.size, "black")
-    for x in range(1, img.width - 1):  # ignore the edge pixels for simplicity (1 to width-1)
-        for y in range(1, img.height - 1):  # ignore edge pixels for simplicity (1 to height-1)
+    for x in range(
+        1, img.width - 1
+    ):  # ignore the edge pixels for simplicity (1 to width-1)
+        for y in range(
+            1, img.height - 1
+        ):  # ignore edge pixels for simplicity (1 to height-1)
 
             # initialise Gx to 0 and Gy to 0 for every pixel
             Gx = 0
@@ -139,26 +145,35 @@ def place_edges(img, edge_img, modifiers):
                 img.putpixel(
                     (x, y),
                     edge_colorify(
-                        (ep[0] - edge_img_minimum) / (edge_img_maximum - edge_img_minimum), modifiers['colors'], p
+                        (ep[0] - edge_img_minimum)
+                        / (edge_img_maximum - edge_img_minimum),
+                        modifiers["colors"],
+                        p,
                     ),
                 )
     return img
 
 
 def f(x, n, d, m, l):
-    return round(((l[n] - d[n]) / 255) * (255 ** m[n] - (255 - x) ** m[n]) ** (1 / m[n]) + d[n])
+    return round(
+        ((l[n] - d[n]) / 255) * (255 ** m[n] - (255 - x) ** m[n]) ** (1 / m[n]) + d[n]
+    )
 
 
 def light(x):
-    return tuple(f(x, i, (78, 93, 148), (0.641, 0.716, 1.262), (255, 255, 255)) for i in range(3))
+    return tuple(
+        f(x, i, (78, 93, 148), (0.641, 0.716, 1.262), (255, 255, 255)) for i in range(3)
+    )
 
 
 def dark(x):
-    return tuple(f(x, i, (35, 39, 42), (1.064, 1.074, 1.162), (114, 137, 218)) for i in range(3))
+    return tuple(
+        f(x, i, (35, 39, 42), (1.064, 1.074, 1.162), (114, 137, 218)) for i in range(3)
+    )
 
 
 def edge_detect(img, modifier, variation, maximum, minimum):
-    img = img.convert('RGBA')
+    img = img.convert("RGBA")
     edge_img = edge_antialiasing(img)
     img = blurplefy(img, modifier, variation, maximum, minimum)
     new_img = place_edges(img, edge_img, modifier)
@@ -174,13 +189,25 @@ def f2(x, n, colors, variation):
         return colors[0][n]
     elif x <= variation[1]:
         if variation[0] == variation[2]:
-            return interpolate(colors[0][n], colors[2][n], (x - variation[0]) / (variation[1] - variation[0]))
+            return interpolate(
+                colors[0][n],
+                colors[2][n],
+                (x - variation[0]) / (variation[1] - variation[0]),
+            )
         else:
-            return interpolate(colors[0][n], colors[1][n], (x - variation[0]) / (variation[1] - variation[0]))
+            return interpolate(
+                colors[0][n],
+                colors[1][n],
+                (x - variation[0]) / (variation[1] - variation[0]),
+            )
     elif x <= variation[2]:
         return colors[1][n]
     elif x <= variation[3]:
-        return interpolate(colors[1][n], colors[2][n], (x - variation[2]) / (variation[3] - variation[2]))
+        return interpolate(
+            colors[1][n],
+            colors[2][n],
+            (x - variation[2]) / (variation[3] - variation[2]),
+        )
     else:
         return colors[2][n]
 
@@ -209,14 +236,14 @@ def edge_colorify(x, colors, cur_color):
 
 
 def remove_alpha(img, bg):
-    alpha = img.convert('RGBA').getchannel('A')
+    alpha = img.convert("RGBA").getchannel("A")
     background = Image.new("RGBA", img.size, bg)
     background.paste(img, mask=alpha)
     return background
 
 
 def clean_alpha(img):
-    img = img.convert('RGBA')
+    img = img.convert("RGBA")
     for x in range(img.width):
         for y in range(img.height):
             pixel = img.getpixel((x, y))
@@ -226,21 +253,26 @@ def clean_alpha(img):
 
 
 def blurple_filter(img, modifier, variation, maximum, minimum):
-    img = img.convert('LA')
+    img = img.convert("LA")
     pixels = img.getdata()
-    img = img.convert('RGBA')
-    results = [modifier['func']((x - minimum) * 255 / (255 - minimum)) if x >= minimum else 0 for x in range(256)]
+    img = img.convert("RGBA")
+    results = [
+        modifier["func"]((x - minimum) * 255 / (255 - minimum)) if x >= minimum else 0
+        for x in range(256)
+    ]
 
     img.putdata((*map(lambda x: results[x[0]] + (x[1],), pixels),))
     return clean_alpha(img)
 
 
 def blurplefy(img, modifier, variation, maximum, minimum):
-    img = img.convert('LA')
+    img = img.convert("LA")
     pixels = img.getdata()
-    img = img.convert('RGBA')
+    img = img.convert("RGBA")
     results = [
-        colorify((x - minimum) / (maximum - minimum), modifier['colors'], variation) if x >= minimum else 0
+        colorify((x - minimum) / (maximum - minimum), modifier["colors"], variation)
+        if x >= minimum
+        else 0
         for x in range(256)
     ]
     img.putdata((*map(lambda x: results[x[0]] + (x[1],), pixels),))
@@ -276,28 +308,28 @@ def variation_converter(variations, modifier):
             variation = VARIATIONS[var]
         except KeyError:
             try:
-                variation = VARIATIONS['bg' + var]
+                variation = VARIATIONS["bg" + var]
                 background_color = variation
                 continue
             except KeyError:
                 try:
-                    variation = VARIATIONS['method' + var]
+                    variation = VARIATIONS["method" + var]
                     modifier = variation(modifier)
                     continue
                 except KeyError:
-                    raise RuntimeError(f'Invalid image variation: \"{var}\"')
+                    raise RuntimeError(f'Invalid image variation: "{var}"')
         base_color_var = variation_maker(base_color_var, variation)
     return base_color_var, background_color, modifier
 
 
 def invert_colors(modifier):
-    modifier['colors'] = list(reversed(modifier['colors']))
+    modifier["colors"] = list(reversed(modifier["colors"]))
     return modifier
 
 
 def shift_colors(modifier):
-    colors = modifier['colors']
-    modifier['colors'] = [colors[2], colors[0], colors[1]]
+    colors = modifier["colors"]
+    modifier["colors"] = [colors[2], colors[0], colors[1]]
     return modifier
 
 
@@ -326,7 +358,7 @@ def find_max_index(array):
 
 
 def color_ratios(img, colors):
-    img = img.convert('RGBA')
+    img = img.convert("RGBA")
     total_pixels = img.width * img.height
     color_pixels = [0, 0, 0, 0]
     close_colors = []
@@ -360,34 +392,38 @@ def color_ratios(img, colors):
 
 
 MODIFIERS = {
-    'light': {
-        'func': light,
-        'colors': [(78, 93, 148), (114, 137, 218), (255, 255, 255)],
-        'color_names': ['Dark Blurple', 'Blurple', 'White'],
+    "light": {
+        "func": light,
+        "colors": [(78, 93, 148), (114, 137, 218), (255, 255, 255)],
+        "color_names": ["Dark Blurple", "Blurple", "White"],
     }
 }
 
-METHODS = {'--blurplefy': blurplefy, '--edge-detect': edge_detect, '--filter': blurple_filter}
+METHODS = {
+    "--blurplefy": blurplefy,
+    "--edge-detect": edge_detect,
+    "--filter": blurple_filter,
+}
 
 VARIATIONS = {
     None: (0, 0, 0, 0),
-    '++more-white': (0, 0, -0.05, -0.05),
-    '++more-blurple': (-0.1, -0.1, 0.1, 0.1),
-    '++more-dark-blurple': (0.05, 0.05, 0, 0),
-    '++less-white': (0, 0, 0.05, 0.05),
-    '++less-blurple': (0.1, 0.1, -0.1, -0.1),
-    '++less-dark-blurple': (-0.05, -0.05, 0, 0),
-    '++no-white': (0, 0, 500, 500),
-    '++no-blurple': (0, 500, -500, 0),
-    '++no-dark-blurple': (-500, -500, 0, 0),
-    '++classic': (0.15, -0.15, 0.15, -0.15),
-    '++less-gradient': (0.05, -0.05, 0.05, -0.05),
-    '++more-gradient': (-0.05, 0.05, -0.05, 0.05),
-    'method++invert': invert_colors,
-    'method++shift': shift_colors,
-    'bg++white-bg': (255, 255, 255, 255),
-    'bg++blurple-bg': (114, 137, 218, 255),
-    'bg++dark-blurple-bg': (78, 93, 148, 255),
+    "++more-white": (0, 0, -0.05, -0.05),
+    "++more-blurple": (-0.1, -0.1, 0.1, 0.1),
+    "++more-dark-blurple": (0.05, 0.05, 0, 0),
+    "++less-white": (0, 0, 0.05, 0.05),
+    "++less-blurple": (0.1, 0.1, -0.1, -0.1),
+    "++less-dark-blurple": (-0.05, -0.05, 0, 0),
+    "++no-white": (0, 0, 500, 500),
+    "++no-blurple": (0, 500, -500, 0),
+    "++no-dark-blurple": (-500, -500, 0, 0),
+    "++classic": (0.15, -0.15, 0.15, -0.15),
+    "++less-gradient": (0.05, -0.05, 0.05, -0.05),
+    "++more-gradient": (-0.05, 0.05, -0.05, 0.05),
+    "method++invert": invert_colors,
+    "method++shift": shift_colors,
+    "bg++white-bg": (255, 255, 255, 255),
+    "bg++blurple-bg": (114, 137, 218, 255),
+    "bg++dark-blurple-bg": (78, 93, 148, 255),
 }
 
 
@@ -405,11 +441,11 @@ def writeImage(out, frames, filename="blurple.gif"):
             frame,
             dispose_extent[:2],
             {
-                'disposal': disposal_method,
-                'duration': frame.info["duration"],
-                'include_color_table': include_color_table,
-                'transparency': 255,
-                'loop': frame.info["loop"],
+                "disposal": disposal_method,
+                "duration": frame.info["duration"],
+                "include_color_table": include_color_table,
+                "transparency": 255,
+                "loop": frame.info["loop"],
             },
         )
 
@@ -418,14 +454,16 @@ def convert_image(image, modifier, method, variations):
     try:
         modifier_converter = dict(MODIFIERS[modifier])
     except KeyError:
-        raise RuntimeError(f'Invalid image modifier: \"{modifier}\"')
+        raise RuntimeError(f'Invalid image modifier: "{modifier}"')
 
     try:
         method_converter = METHODS[method]
     except KeyError:
-        raise RuntimeError(f'Invalid image method: \"{method}\"')
+        raise RuntimeError(f'Invalid image method: "{method}"')
 
-    base_color_var, background_color, modifier_converter = variation_converter(variations, modifier_converter)
+    base_color_var, background_color, modifier_converter = variation_converter(
+        variations, modifier_converter
+    )
 
     with Image.open(io.BytesIO(image)) as img:
         filename = None
@@ -435,7 +473,7 @@ def convert_image(image, modifier, method, variations):
             disposals = []
             colors = []
             try:
-                loop = img.info['loop']
+                loop = img.info["loop"]
             except KeyError:
                 loop = 1
 
@@ -444,7 +482,7 @@ def convert_image(image, modifier, method, variations):
             count = 0
             new_size = img.size
             for img_frame in ImageSequence.Iterator(img):
-                frame = img_frame.convert('LA')
+                frame = img_frame.convert("LA")
 
                 if frame.getextrema()[0][0] < minimum:
                     minimum = frame.getextrema()[0][0]
@@ -476,19 +514,28 @@ def convert_image(image, modifier, method, variations):
             for frame in ImageSequence.Iterator(img):
                 print(index)
                 index += 1
-                disposals.append(frame.disposal_method if img.format == 'GIF' else frame.dispose_op)
-                durations.append(frame.info['duration'])
+                disposals.append(
+                    frame.disposal_method if img.format == "GIF" else frame.dispose_op
+                )
+                durations.append(frame.info["duration"])
                 dispose_extent = frame.dispose_extent
                 new_frame = Image.new("RGBA", new_size)
                 new_frame.paste(frame.resize(new_size, Image.ANTIALIAS))
                 new_img = Image.new("RGBA", new_size)
-                new_img.paste(method_converter(new_frame, modifier_converter, base_color_var, maximum, minimum), (0, 0))
+                new_img.paste(
+                    method_converter(
+                        new_frame, modifier_converter, base_color_var, maximum, minimum
+                    ),
+                    (0, 0),
+                )
                 if background_color is not None:
                     new_img = remove_alpha(new_img, background_color)
-                alpha = new_img.getchannel('A')
+                alpha = new_img.getchannel("A")
                 if alpha.getextrema()[0] < 255 and optimize:
                     optimize = False
-                new_img = new_img.convert('RGB').convert('P', palette=Image.ADAPTIVE, colors=255)
+                new_img = new_img.convert("RGB").convert(
+                    "P", palette=Image.ADAPTIVE, colors=255
+                )
                 mask = Image.eval(alpha, lambda a: 255 if a <= 128 else 0)
                 new_img.paste(255, mask=mask)
                 new_img.dispose_extent = (
@@ -499,8 +546,8 @@ def convert_image(image, modifier, method, variations):
                 )
                 new_img.disposal_method = frame.disposal_method
                 new_img.global_palette = frame.global_palette = frame.palette
-                new_img.info['duration'] = frame.info['duration']
-                new_img.info['loop'] = loop
+                new_img.info["duration"] = frame.info["duration"]
+                new_img.info["loop"] = loop
                 frames.append(new_img)
 
             out = io.BytesIO()
@@ -508,7 +555,7 @@ def convert_image(image, modifier, method, variations):
             try:
                 frames[0].save(
                     out,
-                    format='GIF',
+                    format="GIF",
                     append_images=frames[1:],
                     save_all=True,
                     loop=loop,
@@ -519,9 +566,9 @@ def convert_image(image, modifier, method, variations):
                 )
             except TypeError as e:
                 log.exception()
-                raise RuntimeError('Invalid GIF.')
+                raise RuntimeError("Invalid GIF.")
 
-            filename = f'blurple.gif'
+            filename = f"blurple.gif"
 
         elif img.format == "PNG" and img.is_animated:
             frames = []
@@ -531,14 +578,14 @@ def convert_image(image, modifier, method, variations):
             minimum = 256
             maximum = 0
             try:
-                loop = img.info['loop']
+                loop = img.info["loop"]
             except KeyError:
                 loop = 1
 
             count = 0
             new_size = img.size
             for img_frame in ImageSequence.Iterator(img):
-                frame = img_frame.convert('RGBA')
+                frame = img_frame.convert("RGBA")
 
                 if frame.getextrema()[0][0] < minimum:
                     minimum = frame.getextrema()[0][0]
@@ -569,19 +616,24 @@ def convert_image(image, modifier, method, variations):
                 print(index)
                 index += 1
                 # disposals.append(frame.dispose_op)
-                durations.append(frame.info['duration'])
-                blends.append(frame.info['blend'])
+                durations.append(frame.info["duration"])
+                blends.append(frame.info["blend"])
                 new_frame = Image.new("RGBA", new_size)
                 new_frame.paste(frame.resize(new_size, Image.NEAREST))
                 new_img = Image.new("RGBA", new_size)
-                new_img.paste(method_converter(new_frame, modifier_converter, base_color_var, maximum, minimum), (0, 0))
+                new_img.paste(
+                    method_converter(
+                        new_frame, modifier_converter, base_color_var, maximum, minimum
+                    ),
+                    (0, 0),
+                )
                 if background_color is not None:
                     new_img = remove_alpha(new_img, background_color)
                 new_img.global_palette = frame.global_palette = frame.palette
                 # new_img.dispose_op = frame.dispose_op
-                new_img.info['duration'] = frame.info['duration']
-                new_img.info['loop'] = loop
-                new_img.info['blend'] = frame.info['blend']
+                new_img.info["duration"] = frame.info["duration"]
+                new_img.info["loop"] = loop
+                new_img.info["blend"] = frame.info["blend"]
 
                 frames.append(new_img)
 
@@ -590,7 +642,7 @@ def convert_image(image, modifier, method, variations):
             try:
                 frames[0].save(
                     out,
-                    format='PNG',
+                    format="PNG",
                     append_images=frames[1:],
                     save_all=True,
                     loop=loop,
@@ -600,33 +652,37 @@ def convert_image(image, modifier, method, variations):
                 )
             except TypeError as e:
                 log.exception()
-                raise RuntimeError('Invalid APNG.')
+                raise RuntimeError("Invalid APNG.")
 
-            filename = f'blurple.png'
+            filename = f"blurple.png"
 
         else:
 
             if asizeof.asizeof(img) / 1024 > 9:
                 width, height = img.size
                 ratio = 9 / (asizeof.asizeof(img) / 1024)
-                img.thumbnail((int(width * ratio), int(height * ratio)), Image.ANTIALIAS)
+                img.thumbnail(
+                    (int(width * ratio), int(height * ratio)), Image.ANTIALIAS
+                )
             print(f"Final:{asizeof.asizeof(img)/1024}")
             print(asizeof.asizeof(img) / 1024)
-            img = img.convert('LA')
+            img = img.convert("LA")
             print(asizeof.asizeof(img) / 1024)
 
             minimum = img.getextrema()[0][0]
             maximum = img.getextrema()[0][1]
             print(asizeof.asizeof(img) / 1024)
-            img = method_converter(img, modifier_converter, base_color_var, maximum, minimum)
+            img = method_converter(
+                img, modifier_converter, base_color_var, maximum, minimum
+            )
             if background_color is not None:
                 img = remove_alpha(img, background_color)
             print(asizeof.asizeof(img) / 1024)
             if img.tell() > 1024 ** 2 * 8:
-                raise RuntimeError(f'Final image too big!')
+                raise RuntimeError(f"Final image too big!")
             out = io.BytesIO()
-            img.save(out, format='png')
-            filename = f'blurple.png'
+            img.save(out, format="png")
+            filename = f"blurple.png"
 
     out.seek(0)
     return filename, out.getvalue()
@@ -636,7 +692,7 @@ def check_image(image, modifier, method):
     try:
         modifier_converter = MODIFIERS[modifier]
     except KeyError:
-        raise RuntimeError('Invalid image modifier.')
+        raise RuntimeError("Invalid image modifier.")
 
     with Image.open(io.BytesIO(image)) as img:
         if img.format == "GIF":
@@ -645,7 +701,7 @@ def check_image(image, modifier, method):
 
             for frame in ImageSequence.Iterator(img):
                 f = frame.resize((round(img.width / 3), round(img.height / 3)))
-                values = color_ratios(f, modifier_converter['colors'])
+                values = color_ratios(f, modifier_converter["colors"])
                 for i in range(4):
                     total[i] += values[i]
                 count += 1
@@ -658,7 +714,7 @@ def check_image(image, modifier, method):
 
         else:
             img = img.resize((round(img.width / 3), round(img.height / 3)))
-            values = color_ratios(img, modifier_converter['colors'])
+            values = color_ratios(img, modifier_converter["colors"])
 
             ratios = [0, 0, 0, 0]
             for i in range(4):
@@ -668,7 +724,9 @@ def check_image(image, modifier, method):
 
     colors = []
     for i in range(3):
-        colors.append({'name': modifier_converter['color_names'][i], 'ratio': ratios[i]})
-    colors.append({'name': 'Non-Blurple', 'ratio': ratios[3]})
-    data = {'passed': passed, 'colors': colors}
+        colors.append(
+            {"name": modifier_converter["color_names"][i], "ratio": ratios[i]}
+        )
+    colors.append({"name": "Non-Blurple", "ratio": ratios[3]})
+    data = {"passed": passed, "colors": colors}
     return data
