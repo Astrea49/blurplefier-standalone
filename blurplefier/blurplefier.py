@@ -419,11 +419,16 @@ def convert_image(
     ----------
     image: :class:`bytes`
         The image to be converted in bytes form.
+
     method: :class:`Methods`
         The filter to be used on the image in order to blurplefy it.
+
         `CLASSIC` or `BLURPLEFY` is the classical version.
+
         `FILTER` is better with images that have more detail.
+
         `EDGE_DETECT` is `CLASSIC` but with a special case to preserve edges.
+
     variations: :class:`Optional[Iterable[Literal]] (please check the actual code for what variations can be used)`
         The variations to use while converting the image, if needed.
         These help adjust the image to a more desirable state.
