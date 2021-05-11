@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import enum
 import io
 import math
 import typing
@@ -330,12 +331,12 @@ MODIFIERS = {
     }
 }
 
-METHODS = {
-    "classic": _blurplefy,
-    "blurplefy": _blurplefy,
-    "edge-detect": _edge_detect,
-    "filter": _blurple_filter,
-}
+
+class Methods(enum.Enum):
+    CLASSIC = BLURPLEFY = _blurplefy
+    EDGE_DETECT = _edge_detect
+    FILTER = _blurple_filter
+
 
 VARIATIONS = {
     None: (0, 0, 0, 0),
@@ -387,7 +388,7 @@ def write_image(out, frames, filename="blurple.gif"):
 
 def convert_image(
     image: bytes,
-    method: typing.Literal["classic", "blurplefy", "edge-detect", "filter"],
+    method: Methods,
     variations: typing.Optional[
         typing.Iterable[
             typing.Literal[
@@ -418,12 +419,12 @@ def convert_image(
     ----------
     image: :class:`bytes`
         The image to be converted in bytes form.
-    method: :class:`Literal["classic", "blurplefy", "edge-detect", "filter"]`
+    method: :class:`Methods`
         The filter to be used on the image in order to blurplefy it.
-        `classic` or `blurplefy` is the classical version.
-        `filter` is better with images that have more detail.
-        `edge-detect` is `blurplefy` but with a special case to preserve edges.
-    variations: :class:`Optional[Iterable[Literal]] (please check the actual type hints for what variations can be used)`
+        `CLASSIC` or `BLURPLEFY` is the classical version.
+        `FILTER` is better with images that have more detail.
+        `EDGE_DETECT` is `CLASSIC` but with a special case to preserve edges.
+    variations: :class:`Optional[Iterable[Literal]] (please check the actual code for what variations can be used)`
         The variations to use while converting the image, if needed.
         These help adjust the image to a more desirable state.
         Note that they will no effect with the `filter` method.
@@ -441,10 +442,7 @@ def convert_image(
     if variations is None:
         variations = [None]
 
-    try:
-        method_converter = METHODS[method]
-    except KeyError:
-        raise RuntimeError(f'Invalid image method: "{method}"')
+    method_converter = method
 
     base_color_var, background_color, modifier_converter = _variation_converter(
         variations, modifier_converter

@@ -19,7 +19,7 @@ import blurplefier
 with open("input.png", "rb") as input_file:
     input_bytes = input_file.read()
 
-extension, blurplefied_bytes = blurplefier.convert_image(input_bytes, "classic")
+extension, blurplefied_bytes = blurplefier.convert_image(input_bytes, blurplefier.Methods.CLASSIC)
 
 with open(f"blurplefied_file.{extension}", "wb") as blurplefied_file:
     blurplefied_file.write(blurplefied_bytes)
