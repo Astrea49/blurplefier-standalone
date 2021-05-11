@@ -420,7 +420,7 @@ def convert_image(
     image: :class:`bytes`
         The image to be converted in bytes form.
 
-    method: :class:`Methods`
+    method: :class:`blurplefier.Methods`
         The filter to be used on the image in order to blurplefy it.
 
         `CLASSIC` or `BLURPLEFY` is the classical version.
