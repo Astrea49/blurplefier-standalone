@@ -3,7 +3,7 @@ import blurplefier
 with open("images/input.png", "rb") as test_file:
     test_file_bytes = test_file.read()
 
-extension, standard_output = blurplefier.convert_image(test_file_bytes, "blurplefy")
+extension, standard_output = blurplefier.convert_image(test_file_bytes, "classic")
 
 with open(f"images/output_standard.{extension}", "wb") as output_file:
     output_file.write(standard_output)

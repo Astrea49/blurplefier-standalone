@@ -331,6 +331,7 @@ MODIFIERS = {
 }
 
 METHODS = {
+    "classic": _blurplefy,
     "blurplefy": _blurplefy,
     "edge-detect": _edge_detect,
     "filter": _blurple_filter,
@@ -386,7 +387,7 @@ def write_image(out, frames, filename="blurple.gif"):
 
 def convert_image(
     image: bytes,
-    method: typing.Literal["blurplefy", "edge-detect", "filter"],
+    method: typing.Literal["classic", "blurplefy", "edge-detect", "filter"],
     variations: typing.Optional[
         typing.Iterable[
             typing.Literal[
@@ -417,9 +418,9 @@ def convert_image(
     ----------
     image: :class:`bytes`
         The image to be converted in bytes form.
-    method: :class:`Literal["blurplefy", "edge-detect", "filter"]`
+    method: :class:`Literal["classic", "blurplefy", "edge-detect", "filter"]`
         The filter to be used on the image in order to blurplefy it.
-        `blurplefy` is the classical version.
+        `classic` or `blurplefy` is the classical version.
         `filter` is better with images that have more detail.
         `edge-detect` is `blurplefy` but with a special case to preserve edges.
     variations: :class:`Optional[Iterable[Literal]] (please check the actual type hints for what variations can be used)`
