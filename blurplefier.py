@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import enum
 import io
 import math
 import sys
@@ -424,11 +425,11 @@ def convert_image(
                 "++classic",
                 "++less-gradient",
                 "++more-gradient",
-                "method++invert",
-                "method++shift",
-                "bg++white-bg",
-                "bg++blurple-bg",
-                "bg++dark-blurple-bg",
+                "++invert",
+                "++shift",
+                "++white-bg",
+                "++blurple-bg",
+                "++dark-blurple-bg",
             ]
         ]
     ],
