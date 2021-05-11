@@ -10,7 +10,6 @@ from types import ModuleType
 from PIL import GifImagePlugin
 from PIL import Image
 from PIL import ImageSequence
-from pympler import asizeof
 
 # Custom objects know their class.
 # Function objects seem to know way too much, including modules.
@@ -473,7 +472,6 @@ def convert_image(
             frames = []
             durations = []
             disposals = []
-            colors = []
             try:
                 loop = img.info["loop"]
             except KeyError:
@@ -500,18 +498,7 @@ def convert_image(
                 count += 1
             optimize = True
 
-            if asizeof.asizeof(img) / 1024 > 9:
-                width, height = new_size
-                ratio = 9 / (asizeof.asizeof(img) / 1024)
-                new_size = (int(width * ratio), int(height * ratio))
-
-            if count > 50:
-                width, height = new_size
-                ratio = 50 / float(count)
-                new_size = (int(width * ratio), int(height * ratio))
-
             index = 0
-            palette = None
 
             for frame in ImageSequence.Iterator(img):
                 index += 1
@@ -600,16 +587,6 @@ def convert_image(
                     new_size[1] = img_frame.size[1]
                 count += 1
 
-            if asizeof.asizeof(img) / 1024 > 9:
-                width, height = new_size
-                ratio = 9 / (asizeof.asizeof(img) / 1024)
-                new_size = (int(width * ratio), int(height * ratio))
-
-            if count > 50:
-                width, height = new_size
-                ratio = 50 / float(count)
-                new_size = (int(width * ratio), int(height * ratio))
-
             index = 0
 
             for frame in ImageSequence.Iterator(img):
@@ -655,13 +632,6 @@ def convert_image(
             filename = f"blurple.png"
 
         else:
-
-            if asizeof.asizeof(img) / 1024 > 9:
-                width, height = img.size
-                ratio = 9 / (asizeof.asizeof(img) / 1024)
-                img.thumbnail(
-                    (int(width * ratio), int(height * ratio)), Image.ANTIALIAS
-                )
             img = img.convert("LA")
 
             minimum = img.getextrema()[0][0]
