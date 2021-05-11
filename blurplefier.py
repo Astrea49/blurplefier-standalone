@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
-import enum
 import io
 import math
-import sys
 import typing
-from gc import get_referents
 from types import FunctionType
 from types import ModuleType
 
@@ -18,26 +15,8 @@ from PIL import ImageSequence
 BLACKLIST = type, ModuleType, FunctionType
 
 
-def getsize(obj):
-    """sum size of object & members."""
-    if isinstance(obj, BLACKLIST):
-        raise TypeError("getsize() does not take argument of type: " + str(type(obj)))
-    seen_ids = set()
-    size = 0
-    objects = [obj]
-    while objects:
-        need_referents = []
-        for obj in objects:
-            if not isinstance(obj, BLACKLIST) and id(obj) not in seen_ids:
-                seen_ids.add(id(obj))
-                size += sys.getsizeof(obj)
-                need_referents.append(obj)
-        objects = get_referents(*need_referents)
-    return size
-
-
 # source: https://dev.to/enzoftware/how-to-build-amazing-image-filters-with-python-median-filter---sobel-filter---5h7
-def edge_antialiasing(img):
+def _edge_antialiasing(img):
     new_img = Image.new("RGB", img.size, "black")
     for x in range(
         1, img.width - 1
@@ -131,7 +110,7 @@ def edge_antialiasing(img):
     return new_img
 
 
-def place_edges(img, edge_img, modifiers):
+def _place_edges(img, edge_img, modifiers):
     edge_img_minimum = 10
     edge_img_maximum = edge_img.crop().getextrema()[0][1]
     for x in range(1, img.width - 1):
@@ -141,7 +120,7 @@ def place_edges(img, edge_img, modifiers):
             if ep[0] > edge_img_minimum:
                 img.putpixel(
                     (x, y),
-                    edge_colorify(
+                    _edge_colorify(
                         (ep[0] - edge_img_minimum)
                         / (edge_img_maximum - edge_img_minimum),
                         modifiers["colors"],
@@ -151,47 +130,42 @@ def place_edges(img, edge_img, modifiers):
     return img
 
 
-def f(x, n, d, m, l):
+def _f(x, n, d, m, l):
     return round(
         ((l[n] - d[n]) / 255) * (255 ** m[n] - (255 - x) ** m[n]) ** (1 / m[n]) + d[n]
     )
 
 
-def light(x):
+def _light(x):
     return tuple(
-        f(x, i, (78, 93, 148), (0.641, 0.716, 1.262), (255, 255, 255)) for i in range(3)
+        _f(x, i, (78, 93, 148), (0.641, 0.716, 1.262), (255, 255, 255))
+        for i in range(3)
     )
 
 
-def dark(x):
-    return tuple(
-        f(x, i, (35, 39, 42), (1.064, 1.074, 1.162), (114, 137, 218)) for i in range(3)
-    )
-
-
-def edge_detect(img, modifier, variation, maximum, minimum):
+def _edge_detect(img, modifier, variation, maximum, minimum):
     img = img.convert("RGBA")
-    edge_img = edge_antialiasing(img)
-    img = blurplefy(img, modifier, variation, maximum, minimum)
-    return place_edges(img, edge_img, modifier)
+    edge_img = _edge_antialiasing(img)
+    img = _blurplefy(img, modifier, variation, maximum, minimum)
+    return _place_edges(img, edge_img, modifier)
 
 
-def interpolate(color1, color2, percent):
+def _interpolate(color1, color2, percent):
     return round((color2 - color1) * percent + color1)
 
 
-def f2(x, n, colors, variation):
+def _f2(x, n, colors, variation):
     if x <= variation[0]:
         return colors[0][n]
     elif x <= variation[1]:
         if variation[0] == variation[2]:
-            return interpolate(
+            return _interpolate(
                 colors[0][n],
                 colors[2][n],
                 (x - variation[0]) / (variation[1] - variation[0]),
             )
         else:
-            return interpolate(
+            return _interpolate(
                 colors[0][n],
                 colors[1][n],
                 (x - variation[0]) / (variation[1] - variation[0]),
@@ -199,7 +173,7 @@ def f2(x, n, colors, variation):
     elif x <= variation[2]:
         return colors[1][n]
     elif x <= variation[3]:
-        return interpolate(
+        return _interpolate(
             colors[1][n],
             colors[2][n],
             (x - variation[2]) / (variation[3] - variation[2]),
@@ -208,34 +182,34 @@ def f2(x, n, colors, variation):
         return colors[2][n]
 
 
-def f3(x, n, colors, cur_color):
-    array = [distance_to_color(colors[i], cur_color) for i in range(len(colors))]
+def _f3(x, n, colors, cur_color):
+    array = [_distance_to_color(colors[i], cur_color) for i in range(len(colors))]
 
-    closest_color = find_max_index(array)
+    closest_color = _find_max_index(array)
     if closest_color == 0:
-        return interpolate(colors[0][n], colors[1][n], x)
+        return _interpolate(colors[0][n], colors[1][n], x)
     elif closest_color == 1:
-        return interpolate(colors[1][n], colors[2][n], x)
+        return _interpolate(colors[1][n], colors[2][n], x)
     else:
-        return interpolate(colors[2][n], colors[1][n], x)
+        return _interpolate(colors[2][n], colors[1][n], x)
 
 
-def colorify(x, colors, variation):
-    return tuple(f2(x, i, colors, variation) for i in range(3))
+def _colorify(x, colors, variation):
+    return tuple(_f2(x, i, colors, variation) for i in range(3))
 
 
-def edge_colorify(x, colors, cur_color):
-    return tuple(f3(x, i, colors, cur_color) for i in range(3))
+def _edge_colorify(x, colors, cur_color):
+    return tuple(_f3(x, i, colors, cur_color) for i in range(3))
 
 
-def remove_alpha(img, bg):
+def _remove_alpha(img, bg):
     alpha = img.convert("RGBA").getchannel("A")
     background = Image.new("RGBA", img.size, bg)
     background.paste(img, mask=alpha)
     return background
 
 
-def clean_alpha(img):
+def _clean_alpha(img):
     img = img.convert("RGBA")
     for x in range(img.width):
         for y in range(img.height):
@@ -245,7 +219,7 @@ def clean_alpha(img):
     return img
 
 
-def blurple_filter(img, modifier, variation, maximum, minimum):
+def _blurple_filter(img, modifier, variation, maximum, minimum):
     img = img.convert("LA")
     pixels = img.getdata()
     img = img.convert("RGBA")
@@ -255,24 +229,24 @@ def blurple_filter(img, modifier, variation, maximum, minimum):
     ]
 
     img.putdata((*map(lambda x: results[x[0]] + (x[1],), pixels),))
-    return clean_alpha(img)
+    return _clean_alpha(img)
 
 
-def blurplefy(img, modifier, variation, maximum, minimum):
+def _blurplefy(img, modifier, variation, maximum, minimum):
     img = img.convert("LA")
     pixels = img.getdata()
     img = img.convert("RGBA")
     results = [
-        colorify((x - minimum) / (maximum - minimum), modifier["colors"], variation)
+        _colorify((x - minimum) / (maximum - minimum), modifier["colors"], variation)
         if x >= minimum
         else 0
         for x in range(256)
     ]
     img.putdata((*map(lambda x: results[x[0]] + (x[1],), pixels),))
-    return clean_alpha(img)
+    return _clean_alpha(img)
 
 
-def variation_maker(base, var):
+def _variation_maker(base, var):
     if var[0] <= -100:
         base1 = base2 = 0
         base3 = (base[2] + base[0]) / 2 * 0.75
@@ -292,7 +266,7 @@ def variation_maker(base, var):
     return base1, base2, base3, base4
 
 
-def variation_converter(variations, modifier):
+def _variation_converter(variations, modifier):
     variations.sort()
     base_color_var = (0.15, 0.3, 0.7, 0.85)
     background_color = None
@@ -311,34 +285,34 @@ def variation_converter(variations, modifier):
                     continue
                 except KeyError:
                     raise RuntimeError(f'Invalid image variation: "{var}"')
-        base_color_var = variation_maker(base_color_var, variation)
+        base_color_var = _variation_maker(base_color_var, variation)
     return base_color_var, background_color, modifier
 
 
-def invert_colors(modifier):
+def _invert_colors(modifier):
     modifier["colors"] = list(reversed(modifier["colors"]))
     return modifier
 
 
-def shift_colors(modifier):
+def _shift_colors(modifier):
     colors = modifier["colors"]
     modifier["colors"] = [colors[2], colors[0], colors[1]]
     return modifier
 
 
-def interpolate_colors(color1, color2, x):
+def _interpolate_colors(color1, color2, x):
     new_color = [0, 0, 0]
     for i in range(3):
         new_color[i] = round((color2[i] - color1[i]) * x + color1[i])
     return tuple(new_color)
 
 
-def distance_to_color(color1, color2):
+def _distance_to_color(color1, color2):
     total = sum((255 - abs(color1[i] - color2[i])) / 255 for i in range(3))
     return total / 3
 
 
-def find_max_index(array):
+def _find_max_index(array):
     maximum = 0
     closest = None
     for i in range(len(array)):
@@ -350,16 +324,16 @@ def find_max_index(array):
 
 MODIFIERS = {
     "light": {
-        "func": light,
+        "func": _light,
         "colors": [(78, 93, 148), (114, 137, 218), (255, 255, 255)],
         "color_names": ["Dark Blurple", "Blurple", "White"],
     }
 }
 
 METHODS = {
-    "blurplefy": blurplefy,
-    "edge-detect": edge_detect,
-    "filter": blurple_filter,
+    "blurplefy": _blurplefy,
+    "edge-detect": _edge_detect,
+    "filter": _blurple_filter,
 }
 
 VARIATIONS = {
@@ -376,8 +350,8 @@ VARIATIONS = {
     "++classic": (0.15, -0.15, 0.15, -0.15),
     "++less-gradient": (0.05, -0.05, 0.05, -0.05),
     "++more-gradient": (-0.05, 0.05, -0.05, 0.05),
-    "method++invert": invert_colors,
-    "method++shift": shift_colors,
+    "method++invert": _invert_colors,
+    "method++shift": _shift_colors,
     "bg++white-bg": (255, 255, 255, 255),
     "bg++blurple-bg": (114, 137, 218, 255),
     "bg++dark-blurple-bg": (78, 93, 148, 255),
@@ -411,7 +385,7 @@ def convert_image(
     image: bytes,
     method: typing.Literal["blurplefy", "edge-detect", "filter"],
     variations: typing.Optional[
-        typing.List[
+        typing.Iterable[
             typing.Literal[
                 "++more-white",
                 "++more-blurple",
@@ -445,7 +419,7 @@ def convert_image(
         `blurplefy` is the classical version.
         `filter` is better with images that have more detail.
         `edge-detect` is `blurplefy` but with a special case to preserve edges.
-    variations: :class:`Optional[List[Literal]] (please check the actual type hints for what variations can be used)`
+    variations: :class:`Optional[Iterable[Literal]] (please check the actual type hints for what variations can be used)`
         The variations to use while converting the image, if needed.
         These help adjust the image to a more desirable state.
         Note that they will no effect with the `filter` method.
@@ -460,7 +434,7 @@ def convert_image(
     modifier_converter = dict(MODIFIERS["light"])
 
     # deal with cases where user did not pass in variations
-    if not variations:
+    if variations is None:
         variations = [None]
 
     try:
@@ -468,7 +442,7 @@ def convert_image(
     except KeyError:
         raise RuntimeError(f'Invalid image method: "{method}"')
 
-    base_color_var, background_color, modifier_converter = variation_converter(
+    base_color_var, background_color, modifier_converter = _variation_converter(
         variations, modifier_converter
     )
 
@@ -512,7 +486,6 @@ def convert_image(
                     frame.disposal_method if img.format == "GIF" else frame.dispose_op
                 )
                 durations.append(frame.info["duration"])
-                dispose_extent = frame.dispose_extent
                 new_frame = Image.new("RGBA", new_size)
                 new_frame.paste(frame.resize(new_size, Image.ANTIALIAS))
                 new_img = Image.new("RGBA", new_size)
@@ -523,7 +496,7 @@ def convert_image(
                     (0, 0),
                 )
                 if background_color is not None:
-                    new_img = remove_alpha(new_img, background_color)
+                    new_img = _remove_alpha(new_img, background_color)
                 alpha = new_img.getchannel("A")
                 if alpha.getextrema()[0] < 255 and optimize:
                     optimize = False
@@ -610,7 +583,7 @@ def convert_image(
                     (0, 0),
                 )
                 if background_color is not None:
-                    new_img = remove_alpha(new_img, background_color)
+                    new_img = _remove_alpha(new_img, background_color)
                 new_img.global_palette = frame.global_palette = frame.palette
                 # new_img.dispose_op = frame.dispose_op
                 new_img.info["duration"] = frame.info["duration"]
@@ -646,7 +619,7 @@ def convert_image(
                 img, modifier_converter, base_color_var, maximum, minimum
             )
             if background_color is not None:
-                img = remove_alpha(img, background_color)
+                img = _remove_alpha(img, background_color)
 
             out = io.BytesIO()
             img.save(out, format="png")
