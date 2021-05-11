@@ -16,8 +16,8 @@ pip install -U git+https://github.com/Sonic4999/blurplefier-standalone.git
 ```python
 import blurplefier
 
-input_file = open("input.png", "rb")
-input_bytes = input_file.read()
+with open("input.png", "rb") as input_file:
+    input_bytes = input_file.read()
 
 extension, blurplefied_bytes = blurplefier.convert_image(input_bytes, "blurplefy")
 

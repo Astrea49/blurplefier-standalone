@@ -1,7 +1,7 @@
 import blurplefier
 
-test_file = open("images/input.png", "rb")
-test_file_bytes = test_file.read()
+with open("images/input.png", "rb") as test_file:
+    test_file_bytes = test_file.read()
 
 extension, standard_output = blurplefier.convert_image(test_file_bytes, "blurplefy")
 
