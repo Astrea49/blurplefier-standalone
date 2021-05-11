@@ -409,26 +409,27 @@ def writeImage(out, frames, filename="blurple.gif"):
 def convert_image(
     image: bytes,
     method: typing.Literal["blurplefy", "edge-detect", "filter"],
-    variations: typing.List[
-        typing.Literal[
-            None,
-            "++more-white",
-            "++more-blurple",
-            "++more-dark-blurple",
-            "++less-white",
-            "++less-blurple",
-            "++less-dark-blurple",
-            "++no-white",
-            "++no-blurple",
-            "++no-dark-blurple",
-            "++classic",
-            "++less-gradient",
-            "++more-gradient",
-            "method++invert",
-            "method++shift",
-            "bg++white-bg",
-            "bg++blurple-bg",
-            "bg++dark-blurple-bg",
+    variations: typing.Optional[
+        typing.List[
+            typing.Literal[
+                "++more-white",
+                "++more-blurple",
+                "++more-dark-blurple",
+                "++less-white",
+                "++less-blurple",
+                "++less-dark-blurple",
+                "++no-white",
+                "++no-blurple",
+                "++no-dark-blurple",
+                "++classic",
+                "++less-gradient",
+                "++more-gradient",
+                "method++invert",
+                "method++shift",
+                "bg++white-bg",
+                "bg++blurple-bg",
+                "bg++dark-blurple-bg",
+            ]
         ]
     ],
 ) -> typing.Tuple[str, bytes]:
@@ -456,6 +457,10 @@ def convert_image(
 
     # there's only one for now anyways
     modifier_converter = dict(MODIFIERS["light"])
+
+    # deal with cases where user did not pass in variations
+    if not variations:
+        variations = [None]
 
     try:
         method_converter = METHODS[method]
