@@ -406,7 +406,7 @@ def convert_image(
                 "++dark-blurple-bg",
             ]
         ]
-    ],
+    ] = None,
 ) -> typing.Tuple[str, bytes]:
     """Converts the given image into a blurplefied version of itself with the methods and variations applied.
 
@@ -427,7 +427,7 @@ def convert_image(
     Returns
     ----------
     :class:`Tuple[str, bytes]`
-        A tuple containing the filename of the resulting image and the image data.
+        A tuple containing the extension of the resulting image and the image data.
     """
 
     # there's only one for now anyways
@@ -447,7 +447,7 @@ def convert_image(
     )
 
     with Image.open(io.BytesIO(image)) as img:
-        filename = None
+        extension = None
         if img.format == "GIF":
             frames = []
             durations = []
@@ -534,7 +534,7 @@ def convert_image(
             except TypeError as e:
                 raise RuntimeError("Invalid GIF.")
 
-            filename = f"blurple.gif"
+            extension = "gif"
 
         elif img.format == "PNG" and img.is_animated:
             frames = []
@@ -608,7 +608,7 @@ def convert_image(
             except TypeError as e:
                 raise RuntimeError("Invalid APNG.")
 
-            filename = f"blurple.png"
+            extension = "png"
 
         else:
             img = img.convert("LA")
@@ -623,7 +623,7 @@ def convert_image(
 
             out = io.BytesIO()
             img.save(out, format="png")
-            filename = f"blurple.png"
+            extension = "png"
 
     out.seek(0)
-    return filename, out.getvalue()
+    return extension, out.getvalue()
