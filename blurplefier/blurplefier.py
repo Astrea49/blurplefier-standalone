@@ -138,10 +138,17 @@ def _f(x, n, d, m, l):
     )
 
 
+# if someone would politely tell me how the hell the m values were generated, that would be great
 def _light(x):
     return tuple(
         _f(x, i, (78, 93, 148), (0.641, 0.716, 1.262), (255, 255, 255))
         for i in range(3)
+    )
+
+
+def _dark(x):
+    return tuple(
+        _f(x, i, (35, 39, 42), (1.064, 1.074, 1.162), (114, 137, 218)) for i in range(3)
     )
 
 
@@ -346,13 +353,18 @@ class MethodVariations(enum.Enum):
 
 AllVariations = typing.Union[Variations, BGVariations, MethodVariations]
 
-MODIFIERS = {
-    "light": {
+
+class Modifiers(enum.Enum):
+    LIGHT = {
         "func": _light,
         "colors": [(78, 93, 148), (114, 137, 218), (255, 255, 255)],
         "color_names": ["Dark Blurple", "Blurple", "White"],
     }
-}
+    DARK = {
+        "func": _dark,
+        "colors": [(35, 39, 42), (78, 93, 148), (114, 137, 218)],
+        "color_names": ["Not Quite Black", "Dark Blurple", "Blurple"],
+    }
 
 
 def _variation_converter(variations: typing.Iterable[AllVariations], modifier):
@@ -405,6 +417,7 @@ def convert_image(
     image: bytes,
     method: Methods,
     variations: typing.Optional[typing.Iterable[AllVariations]] = None,
+    modifier: Modifiers = Modifiers.LIGHT,
 ) -> typing.Tuple[str, bytes]:
     """Converts the given image into a blurplefied version of itself with the methods and variations applied.
 
@@ -431,14 +444,21 @@ def convert_image(
 
         The variations that can be used are featured in the `Variations`, `BGVariations`, and `MethodVariations` classes.
 
+    modifier: `blurplefier.Modifiers`
+        Color pallete modifier to use for the final result.
+
+        `LIGHT` is the default if unspecified, and is more or less what you expect.
+
+        `DARK` makes the color pallete darker, although still blurple.
+        It was used for the 2019 event.
+
     Returns
     ----------
     `Tuple[str, bytes]`
         A tuple containing the extension of the resulting image and the image data.
     """
 
-    # there's only one for now anyways
-    modifier_converter = dict(MODIFIERS["light"])
+    modifier_converter = dict(modifier.value)
 
     # deal with cases where user did not pass in variations
     if variations is None:

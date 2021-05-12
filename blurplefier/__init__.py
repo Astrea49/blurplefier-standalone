@@ -10,4 +10,5 @@ from .blurplefier import BGVariations
 from .blurplefier import convert_image
 from .blurplefier import Methods
 from .blurplefier import MethodVariations
+from .blurplefier import Modifiers
 from .blurplefier import write_image
