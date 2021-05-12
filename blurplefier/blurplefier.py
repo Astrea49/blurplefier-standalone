@@ -322,6 +322,7 @@ class Methods(enum.Enum):
 class Variations(enum.Enum):
     """Enum for basic variations to the blurplefied image."""
 
+    NONE = (0, 0, 0, 0)
     MORE_WHITE = (0, 0, -0.05, -0.05)
     MORE_BLURPLE = (-0.1, -0.1, 0.1, 0.1)
     MORE_DARK_BLURPLE = (0.05, 0.05, 0, 0)
@@ -416,7 +417,7 @@ def write_image(out, frames, filename="blurple.gif"):
 def convert_image(
     image: bytes,
     method: Methods,
-    variations: typing.Optional[typing.Iterable[AllVariations]] = None,
+    variations: typing.Optional[typing.Iterable[AllVariations]] = [Variations.NONE],
     modifier: Modifiers = Modifiers.LIGHT,
 ) -> typing.Tuple[str, bytes]:
     """Converts the given image into a blurplefied version of itself with the methods and variations applied.
@@ -459,10 +460,6 @@ def convert_image(
     """
 
     modifier_converter = dict(modifier.value)
-
-    # deal with cases where user did not pass in variations
-    if variations is None:
-        variations = [None]
 
     method_converter = method.value
 
