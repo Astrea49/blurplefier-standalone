@@ -138,7 +138,7 @@ def _f(x, n, d, m, l):
     )
 
 
-# if someone would politely tell me how the hell the m values were generated, that would be great
+# if someone would politely tell me how the heck the m values were generated, that would be great
 def _light(x):
     return tuple(
         _f(x, i, (78, 93, 148), (0.641, 0.716, 1.262), (255, 255, 255))
@@ -149,6 +149,14 @@ def _light(x):
 def _dark(x):
     return tuple(
         _f(x, i, (35, 39, 42), (1.064, 1.074, 1.162), (114, 137, 218)) for i in range(3)
+    )
+
+
+def _new_light(x):
+    # this is guesswork, not really sure what values will be used
+    return tuple(
+        _f(x, i, (88, 101, 242), (0.741, 0.696, 1.162), (255, 255, 255))
+        for i in range(3)
     )
 
 
@@ -343,6 +351,8 @@ class BGVariations(enum.Enum):
     WHITE_BG = (255, 255, 255, 255)
     BLURPLE_BG = (114, 137, 218, 255)
     DARK_BLURPLE_BG = (78, 93, 148, 255)
+    NEW_BLURPLE_BG = NEO_BLURPLE_BG = (88, 101, 242, 255)
+    NEW_DARK_BLURPLE_BG = NEO_DARK_BLURPLE_BG = (64, 73, 142, 255)  # guesswork
 
 
 class MethodVariations(enum.Enum):
@@ -356,7 +366,7 @@ AllVariations = typing.Union[Variations, BGVariations, MethodVariations]
 
 
 class Modifiers(enum.Enum):
-    LIGHT = {
+    LIGHT = OLD_LIGHT = {
         "func": _light,
         "colors": [(78, 93, 148), (114, 137, 218), (255, 255, 255)],
         "color_names": ["Dark Blurple", "Blurple", "White"],
@@ -365,6 +375,13 @@ class Modifiers(enum.Enum):
         "func": _dark,
         "colors": [(35, 39, 42), (78, 93, 148), (114, 137, 218)],
         "color_names": ["Not Quite Black", "Dark Blurple", "Blurple"],
+    }
+    NEW_LIGHT = (
+        NEO_LIGHT
+    ) = {  # values are guesswork, up to project blurple staff to decide real colors
+        "func": _new_light,
+        "colors": [(64, 73, 142), (88, 101, 242), (255, 255, 255)],
+        "color_names": ["Neo Dark Blurple", "Neo Blurple", "White"],
     }
 
 

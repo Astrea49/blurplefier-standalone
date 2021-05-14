@@ -16,3 +16,12 @@ extension, filtered_output = blurplefier.convert_image(
 
 with open(f"images/output_filter.{extension}", "wb") as output_file:
     output_file.write(filtered_output)
+
+extension, neo_output = blurplefier.convert_image(
+    test_file_bytes,
+    blurplefier.Methods.FILTER,
+    modifier=blurplefier.Modifiers.NEW_LIGHT,
+)
+
+with open(f"images/output_neofilter.{extension}", "wb") as output_file:
+    output_file.write(neo_output)
