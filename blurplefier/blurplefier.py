@@ -432,7 +432,7 @@ def write_image(out, frames, filename="blurple.gif"):
 def convert_image(
     image: bytes,
     method: Methods,
-    variations: typing.Optional[typing.Iterable[AllVariations]] = [Variations.NONE],
+    variations: typing.Optional[typing.Iterable[AllVariations]] = None,
     modifier: Modifiers = Modifiers.LIGHT,
 ) -> typing.Tuple[str, bytes]:
     """Converts the given image into a blurplefied version of itself with the methods and variations applied.
@@ -474,6 +474,8 @@ def convert_image(
         A tuple containing the extension of the resulting image and the image data.
     """
 
+    if variations is None:
+        variations = [Variations.NONE]
     modifier_converter = dict(modifier.value)
 
     method_converter = method.value
@@ -485,18 +487,14 @@ def convert_image(
     with Image.open(io.BytesIO(image)) as img:
         extension = None
         if img.format == "GIF":
-            frames = []
-            durations = []
-            disposals = []
             try:
                 loop = img.info["loop"]
             except KeyError:
                 loop = 1
 
+            new_size = list(img.size)
             minimum = 256
             maximum = 0
-            count = 0
-            new_size = list(img.size)
             for img_frame in ImageSequence.Iterator(img):
                 frame = img_frame.convert("LA")
 
@@ -511,11 +509,13 @@ def convert_image(
 
                 if img_frame.size[1] > new_size[1]:
                     new_size[1] = img_frame.size[1]
-                count += 1
             optimize = True
 
             index = 0
 
+            frames = []
+            durations = []
+            disposals = []
             for frame in ImageSequence.Iterator(img):
                 index += 1
                 disposals.append(
@@ -573,19 +573,14 @@ def convert_image(
             extension = "gif"
 
         elif img.format == "PNG" and img.is_animated:
-            frames = []
-            durations = []
-            # disposals = []
-            blends = []
-            minimum = 256
-            maximum = 0
             try:
                 loop = img.info["loop"]
             except KeyError:
                 loop = 1
 
-            count = 0
             new_size = list(img.size)
+            minimum = 256
+            maximum = 0
             for img_frame in ImageSequence.Iterator(img):
                 frame = img_frame.convert("RGBA")
 
@@ -600,10 +595,11 @@ def convert_image(
 
                 if img_frame.size[1] > new_size[1]:
                     new_size[1] = img_frame.size[1]
-                count += 1
-
             index = 0
 
+            frames = []
+            durations = []
+            blends = []
             for frame in ImageSequence.Iterator(img):
                 index += 1
                 # disposals.append(frame.dispose_op)
