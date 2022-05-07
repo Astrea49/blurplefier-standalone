@@ -140,6 +140,12 @@ def _f(x, n, d, m, l):
 
 def _light(x):
     return tuple(
+        _f(x, i, (69, 79, 191), (0.518, 0.556, 1.67), (255, 255, 255)) for i in range(3)
+    )
+
+
+def _old_light(x):
+    return tuple(
         _f(x, i, (78, 93, 148), (0.641, 0.716, 1.262), (255, 255, 255))
         for i in range(3)
     )
@@ -148,16 +154,6 @@ def _light(x):
 def _dark(x):
     return tuple(
         _f(x, i, (35, 39, 42), (1.064, 1.074, 1.162), (114, 137, 218)) for i in range(3)
-    )
-
-
-# i literally talked to the developer in order to figure this out
-# cool person, would ask again
-def _new_light(x):
-    # this is guesswork, not really sure what values will be used
-    return tuple(
-        _f(x, i, (88, 101, 242), (0.741, 0.696, 1.162), (255, 255, 255))
-        for i in range(3)
     )
 
 
@@ -242,11 +238,13 @@ def _blurple_filter(img, modifier, variation, maximum, minimum):
     pixels = img.getdata()
     img = img.convert("RGBA")
     results = [
-        modifier["func"]((x - minimum) * 255 / (255 - minimum)) if x >= minimum else 0
+        modifier["func"]((x - minimum) * 255 / (255 - minimum))
+        if x >= minimum
+        else (0, 0, 0)
         for x in range(256)
     ]
 
-    img.putdata((*map(lambda x: results[x[0]] + (x[1],), pixels),))
+    img.putdata((*map(lambda x: (*results[x[0]], x[1]), pixels),))
     return _clean_alpha(img)
 
 
@@ -257,10 +255,10 @@ def _blurplefy(img, modifier, variation, maximum, minimum):
     results = [
         _colorify((x - minimum) / (maximum - minimum), modifier["colors"], variation)
         if x >= minimum
-        else 0
+        else (0, 0, 0)
         for x in range(256)
     ]
-    img.putdata((*map(lambda x: results[x[0]] + (x[1],), pixels),))
+    img.putdata((*map(lambda x: (*results[x[0]], x[1]), pixels),))
     return _clean_alpha(img)
 
 
@@ -350,10 +348,10 @@ class BGVariations(enum.Enum):
     """Enum for variations that change the background of the blurplefied image."""
 
     WHITE_BG = (255, 255, 255, 255)
-    BLURPLE_BG = (114, 137, 218, 255)
-    DARK_BLURPLE_BG = (78, 93, 148, 255)
-    NEW_BLURPLE_BG = NEO_BLURPLE_BG = (88, 101, 242, 255)
-    NEW_DARK_BLURPLE_BG = NEO_DARK_BLURPLE_BG = (64, 73, 142, 255)  # guesswork
+    BLURPLE_BG = (88, 101, 242, 255)
+    DARK_BLURPLE_BG = (69, 79, 191, 255)
+    OLD_BLURPLE_BG = (114, 137, 218, 255)
+    OLD_DARK_BLURPLE_BG = (78, 93, 148, 255)
 
 
 class MethodVariations(enum.Enum):
@@ -367,22 +365,21 @@ AllVariations = typing.Union[Variations, BGVariations, MethodVariations]
 
 
 class Modifiers(enum.Enum):
-    LIGHT = OLD_LIGHT = {
-        "func": _light,
-        "colors": [(78, 93, 148), (114, 137, 218), (255, 255, 255)],
-        "color_names": ["Dark Blurple", "Blurple", "White"],
-    }
+
     DARK = {
         "func": _dark,
         "colors": [(35, 39, 42), (78, 93, 148), (114, 137, 218)],
         "color_names": ["Not Quite Black", "Dark Blurple", "Blurple"],
     }
-    NEW_LIGHT = (
-        NEO_LIGHT
-    ) = {  # values are guesswork, up to project blurple staff to decide real colors
-        "func": _new_light,
-        "colors": [(64, 73, 142), (88, 101, 242), (255, 255, 255)],
-        "color_names": ["Neo Dark Blurple", "Neo Blurple", "White"],
+    LIGHT = {
+        "func": _light,
+        "colors": [(69, 79, 191), (88, 101, 242), (255, 255, 255)],
+        "color_names": ["Dark Blurple", "Blurple", "White"],
+    }
+    OLD_LIGHT = {
+        "func": _old_light,
+        "colors": [(78, 93, 148), (114, 137, 218), (255, 255, 255)],
+        "color_names": ["Old Dark Blurple", "Old Blurple", "White"],
     }
 
 
@@ -499,7 +496,7 @@ def convert_image(
             minimum = 256
             maximum = 0
             count = 0
-            new_size = img.size
+            new_size = list(img.size)
             for img_frame in ImageSequence.Iterator(img):
                 frame = img_frame.convert("LA")
 
@@ -588,7 +585,7 @@ def convert_image(
                 loop = 1
 
             count = 0
-            new_size = img.size
+            new_size = list(img.size)
             for img_frame in ImageSequence.Iterator(img):
                 frame = img_frame.convert("RGBA")
 
