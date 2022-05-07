@@ -138,7 +138,6 @@ def _f(x, n, d, m, l):
     )
 
 
-# if someone would politely tell me how the heck the m values were generated, that would be great
 def _light(x):
     return tuple(
         _f(x, i, (78, 93, 148), (0.641, 0.716, 1.262), (255, 255, 255))
@@ -152,6 +151,8 @@ def _dark(x):
     )
 
 
+# i literally talked to the developer in order to figure this out
+# cool person, would ask again
 def _new_light(x):
     # this is guesswork, not really sure what values will be used
     return tuple(
