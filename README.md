@@ -9,7 +9,7 @@ A standalone version of the blurplefier part of the Blurplefier bot (from Projec
 This package currently isn't under PyPI because I'm not sure how comfortable I am with doing that, especially with this not being fully my code. There is still a way of installing this, however; simply do:
 
 ```sh
-pip install -U git+https://github.com/Sonic4999/blurplefier-standalone.git
+pip install -U git+https://github.com/Astrea49/blurplefier-standalone.git
 ```
 
 ## Basic Example
